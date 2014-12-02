@@ -1,0 +1,83 @@
+/*
+ * Copyright 2011 Google Inc.
+ * Copyright 2014 Timothy Rae perceptualchaos2@gmail.com
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import org.apache.tools.ant.taskdefs.condition.Os
+
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion Integer.parseInt(COMPILE_SDK)
+    buildToolsVersion BUILD_TOOLS_VERSION
+
+    defaultConfig {
+        targetSdkVersion Integer.parseInt(TARGET_SDK)
+        minSdkVersion Integer.parseInt(MIN_SDK)
+    }
+}
+// Add the main project as a dependency for our library
+dependencies {
+    compile project(':app')
+}
+// Define some tasks which are used in the build process
+task copyClasses(type: Copy) { // Copy the assembled *.class files for only the current namespace into a new directory
+    // get directory for current namespace
+    def namespacePath = PLUGIN_NAMESPACE.replaceAll("\\.","/")
+    // set source and destination directories
+    from "build/intermediates/classes/release/${namespacePath}/"
+    into "build/intermediates/dex/${namespacePath}/"
+
+    // exclude classes which don't have a corresponding entry in the source directory
+    def remExt = { name -> name.lastIndexOf('.').with {it != -1 ? name[0..<it] : name} }
+    eachFile {details ->
+        def thisFile = new File("${projectDir}/src/main/java/${namespacePath}/", remExt(details.name)+".java")
+        if (!(thisFile.exists())) {
+            details.exclude()
+        }
+    }
+}
+
+task assembleExternalJar << {
+    // Get the location of the Android SDK
+    ext.androidSdkDir = System.env.ANDROID_HOME
+    if(androidSdkDir == null) {
+        Properties localProps = new Properties()
+        localProps.load(new FileInputStream(file('local.properties')))
+        ext.androidSdkDir = localProps['sdk.dir']
+    }
+    // Make sure no existing jar file exists as this will cause dx to fail
+    new File("${buildDir}/intermediates/dex/${PLUGIN_NAMESPACE}.jar").delete();
+    // Use command line dx utility to convert *.class files into classes.dex inside jar archive
+    String cmdExt = Os.isFamily(Os.FAMILY_WINDOWS) ? '.bat' : ''
+    exec {
+        commandLine "${androidSdkDir}/build-tools/${BUILD_TOOLS_VERSION}/dx${cmdExt}", '--dex',
+                    "--output=${buildDir}/intermediates/dex/${PLUGIN_NAMESPACE}.jar",
+                    "${buildDir}/intermediates/dex/"
+    }
+    copyJarToOutputs.execute()
+}
+
+task copyJarToOutputs(type: Copy) {
+    // Copy the built jar archive to the outputs folder
+    from 'build/intermediates/dex/'
+    into 'build/outputs/'
+    include '*.jar'
+}
+
+
+// Set the dependencies of the build tasks so that assembleExternalJar does a complete build
+copyClasses.dependsOn(assemble)
+assembleExternalJar.dependsOn(copyClasses)
