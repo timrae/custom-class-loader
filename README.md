@@ -1,5 +1,5 @@
 Port of the work in the [following blog](http://android-developers.blogspot.jp/2011/07/custom-class-loading-in-dalvik.html) 
-to the new Gradle based Android Studio build system.
+to the new Gradle based Android Studio build system, as per [this thread on StackOverflow](http://stackoverflow.com/questions/18174022/custom-class-loading-in-dalvik-with-gradle-android-new-build-system/27241083#27241083)
 
 As the Android Studio Gradle plugin now provides [native multidex support](https://developer.android.com/tools/building/multidex.html),
 which effectively solves the Android 65k method limit, the main motivation for using custom class loading at runtime is now 
