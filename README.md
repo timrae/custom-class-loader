@@ -16,5 +16,5 @@ which will generate the file `/libraries/lib1/build/outputs/com.example.toastlib
 
 To compile the main app it's currently necessary to make the following two changes to the build configuration:
 
-change the first line of '/app/build.gradle' to `apply plugin: 'com.android.application'`
-remove `':libraries:lib1'` from settings.gradle
+ * change the first line of '/app/build.gradle' to `apply plugin: 'com.android.application'`
+ * remove `':libraries:lib1'` from settings.gradle
